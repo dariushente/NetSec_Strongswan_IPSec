@@ -1,0 +1,146 @@
+\documentclass[10pt]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\def\labelitemi{--}
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{packetcolor}{rgb}{0, 0, 1}
+
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{amssymb,amsmath,pdfpages,graphicx}
+%
+% DON'T CHANGE THIS:
+%
+\newcommand{\bannercode}{06-29637}
+\newcommand{\coursetitle}{Network Security (Extended)}
+\newcommand{\Year}{2018}
+\newcommand{\Season}{Spring}
+\addtolength{\textwidth}{5cm}
+\addtolength{\textheight}{5cm}
+\addtolength{\oddsidemargin}{-3cm}
+\addtolength{\headheight}{-3cm}
+%
+% DO ENTER YOUR DETAILS:
+%
+\newcommand{\MyName}{Marius Darius Hente}
+\newcommand{\PracticalsNumber}{5}
+
+%
+% NO NEED TO CHANGE THIS:
+%
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+{\large\noindent\bannercode\ \emph{\coursetitle} \hfill The University of Birmingham\\
+    \Season{} Semester \Year \hfill School of Computer Science\\
+    Submission by \textbf{\MyName}\hfill\today}
+
+%$ Just to balance the single dollar sign above
+
+%
+% ENTER YOUR SOLUTIONS BELOW:
+%
+
+\begin{center}
+      \Large\textbf{Assignment 2: TCP Analysis}\\
+\end{center}
+
+\section{Introduction}
+This assignment for the Network Security module revolves around configuring an IPSec implementation. It is split into two parts:
+\begin{enumerate}
+	\item Configuring IPSec to work with a shared secret. The key is previously known by the participants, having been securely relayed from one to another.
+	\item Configuring IPSec to work with certificates. In this case the participants rely on public / private key encryption and certificate authorities instead of a shared secret.
+\end{enumerate}
+
+For clarity purposes, the environment is defined: two virtual machines running Debian with the LXDE desktop environment, with one acting as the server (running apache) and the other acting as the client. For testing purposes, a third machine is set up to run as a router between the other two, which will allow us to see all the packets being transmitted.
+
+The Strongswan IPSec implementation was chosen, with the "charon" IKE daemon. The machines also have other common internet tools installed such as netcat, wireshark, nmap, etc. The \textbf{ipsec} command was used to set IPSec up, in favor of other tools such as vici or the swanctl command, as it allows running simple configurations very easily.
+
+\section{Part 1: Configuring IPSec with a shared secret}
+For the first part of the assignment, IPSec will be configured using a shared secret. The the two files that need to be modified are \textbf{/etc/ipsec.conf} and \textbf{/etc/ipsec.secrets}. The conf file will store the configuration for the connection, while the the secrets file will store the shared secret, and later the certificates.
+
+A configuration file was developed specifying the connection over static IP, and a shared key was placed into the secrets file (the key being "example"). Now to test our configuration, we should do a simple before-and-after test of the connection.
+
+We can attempt to fetch the page before IPSec and see what the WireShark packets look like:
+
+\begin{center}
+	\includegraphics[scale=0.7]{"ipsec_unsecure"}
+\end{center}
+%
+
+We can clearly see the packets are unencrypted, as we can see the individual TCP headers, the GET message, and the HTTP response. If we were to inspect the packets' payload, we would also see the HTML code that is being sent on the line. An attacker could easily do damage in this case, for example with a man in the middle attack. IPSec is used to provide authentication of the parties (in this part via the shared secret) and encryption of the packets.
+
+Now that we have seen what the base case looks like, we can start IPSec and see how the results differ. The files have already been configured (and will be included with this report), and all must do now is to start the service. To that, we run the following command on both ends of the connection:
+\begin{center}
+	sudo ipsec start
+\end{center}
+Note that if we wanted to debug the connection we could run the command with the --nofork parameter, making it output the debug messages into the console. Since the configuration files are correct, though, we should not need this feature.
+
+Having run the command on the two machines, we can test the connection again by attempting to fetch the web page from the server, and tracking the packets with WireShark:
+
+\begin{center}
+	\includegraphics[scale=0.7]{"ipsec_secure"}
+\end{center}
+
+Success! Our connection is now encrypted. We can no longer see the actual data transmitted, and the data is sent as ESP packets. Furthermore, due to the key used (i.e. the shared secret) we can be confident that the party on the other side of the connection knows our secret, and is therefore authenticated. We have successfully implemented shared-secret IPSec.
+
+\section{Part 2: Configuring IPSec with certificates}
+Shared-secret IPSec is generally useful in cases where we can afford to securely relay a key from our location to the other party's location, i.e. we have a good budget that we can invest in security. This is, however, not realistic in many of today's scenarios. The solution is to run IPSec with an alternative authentication method, namely certificates. For the second part of this assignment, the task is to implement IPSec with certificate-based authentication.
+
+ 
+
+%%%%%%%%% FIGURE SHIT
+%	\textbf{Client \hfill Router} 
+%
+%	\hspace*{-1.5cm}\includegraphics[scale=0.6]{"part5_8_client"}
+%	%\\
+%	\includegraphics[scale=0.6]{"part5_8_router"}
+%	\begin{center}\textbf{Server} \\
+%	\includegraphics[scale=0.6]{"part5_8_server"}
+%	\end{center}
+%%%%%%%%% FIGURE SHIT
+
+\section{Conclusion}
+To conclude this report, we have tested all the necessary functionality that our firewall, implemented via iptables, should have. The system behaves as expected in all cases, with the provided rules. It is blocking what it should be blocking, and forwarding only the packets that it should be forwarding. Thank you very much for taking the time to read this report.
+
+\end{document}
